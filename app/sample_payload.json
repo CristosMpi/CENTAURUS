@@ -1,0 +1,21 @@
+{
+  "device_id": "stake-01",
+  "timestamp": "2026-04-06T11:00:00Z",
+  "sensors": {
+    "pir_triggered": true,
+    "vibration": 0.78,
+    "sound_db": 81.0,
+    "thermal_presence": true,
+    "light_change": 0.21,
+    "humidity": 54.0,
+    "temperature": 17.0
+  },
+  "audio_events": ["digging", "metal_hit"],
+  "network": {
+    "failed_logins": 4,
+    "unknown_ip_hits": 7,
+    "firmware_hash_mismatch": false,
+    "bandwidth_spike": true,
+    "repeated_port_scan_signals": 3
+  }
+}
