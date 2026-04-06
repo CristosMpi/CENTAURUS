@@ -1,0 +1,5 @@
+file_path,label
+train/digging_001.wav,digging
+train/metal_hit_001.wav,metal_hit
+train/drilling_001.wav,drilling
+train/background_001.wav,background
