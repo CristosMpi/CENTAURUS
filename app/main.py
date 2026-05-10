@@ -1,26 +1,32 @@
 from fastapi import FastAPI
 
 from app.config import settings
-from app.engine import analyze
-from app.schemas import AnalyzeRequest, AnalyzeResponse
+from app.engine import assess_threat
+from app.schemas import ThreatAssessmentRequest, ThreatAssessmentResponse
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+app = FastAPI(title="NEN CENTAURUS", version="3.0.0")
 
 
 @app.get("/")
 def root() -> dict:
     return {
-        "name": settings.app_name,
-        "version": settings.app_version,
-        "status": "running",
+        "name": "NEN CENTAURUS for ORIGIN",
+        "version": "3.0.0",
+        "status": "armed",
+        "profile": settings.app_name,
     }
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True}
+    return {"ok": True, "engine": "threat-fusion"}
 
 
-@app.post("/v1/analyze", response_model=AnalyzeResponse)
-def analyze_event(payload: AnalyzeRequest) -> AnalyzeResponse:
-    return analyze(payload)
+@app.post("/v3/assess", response_model=ThreatAssessmentResponse)
+def assess(payload: ThreatAssessmentRequest) -> ThreatAssessmentResponse:
+    return assess_threat(payload)
+
+
+@app.post("/v1/analyze", response_model=ThreatAssessmentResponse)
+def compat_assess(payload: ThreatAssessmentRequest) -> ThreatAssessmentResponse:
+    return assess_threat(payload)
