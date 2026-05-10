@@ -1,50 +1,67 @@
-# CENTAURUS AI
+# NEN CENTAURUS for ORIGIN (v3)
 
-Open-source MVP of the CENTAURUS AI layer for ORIGIN.
+NEN CENTAURUS is a cyber-defense decision engine for ORIGIN environments. It fuses identity, network, runtime integrity, and physical tamper telemetry into a unified threat assessment and containment plan.
 
-## Features
-- FastAPI backend
-- Sensor ingestion endpoint
-- Rule-based + weighted anomaly scoring
-- Sound intelligence event handling
-- Cybersecurity anomaly checks
-- Alert generation
-- Health/status endpoints
-- Simple test suite
+## Core API
+- `POST /v3/assess` — primary threat assessment endpoint
+- `POST /v1/analyze` — compatibility route mapped to the same v3 engine
+- `GET /health` — health + engine state
 
 ## Quick start
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Open docs at `http://127.0.0.1:8000/docs`
-
-## Example request
+## Sample request
 ```bash
-curl -X POST http://127.0.0.1:8000/v1/analyze \\
-  -H "Content-Type: application/json" \\
+curl -X POST http://127.0.0.1:8000/v3/assess \
+  -H "Content-Type: application/json" \
   -d '{
-    "device_id": "stake-01",
-    "timestamp": "2026-04-06T11:00:00Z",
-    "sensors": {
-      "pir_triggered": true,
-      "vibration": 0.78,
-      "sound_db": 81.0,
-      "thermal_presence": true,
-      "light_change": 0.21
+    "timestamp": "2026-05-10T00:00:00Z",
+    "mission_profile": "critical_infra",
+    "identity": {
+      "node_id": "origin-node-17",
+      "operator_id": "op-77",
+      "mfa_verified": false,
+      "impossible_travel_flag": true,
+      "privilege_escalation_attempts": 4
     },
-    "audio_events": ["digging", "metal_hit"],
     "network": {
-      "failed_logins": 4,
-      "unknown_ip_hits": 7,
-      "firmware_hash_mismatch": false,
-      "bandwidth_spike": true
-    }
+      "src_ip": "203.0.113.77",
+      "failed_logins_5m": 30,
+      "unique_ports_scanned_5m": 24,
+      "c2_beacon_score": 0.81,
+      "tls_fingerprint_mismatch": true,
+      "egress_bytes_5m": 220000000
+    },
+    "runtime": {
+      "secure_boot_ok": false,
+      "firmware_hash_match": false,
+      "memory_tamper_alert": true,
+      "unsigned_processes": 6,
+      "suspicious_syscalls_1m": 250
+    },
+    "physical": {
+      "enclosure_opened": true,
+      "vibration": 0.89,
+      "thermal_delta_c": 24,
+      "ultrasonic_motion_score": 0.82
+    },
+    "telemetry_tags": ["night-shift", "vip-asset"]
   }'
 ```
 
-## License
-MIT
+## Security map
+See `docs/NEN_CENTAURUS_SECURITY_MAP.md` for a full map of each capability, where it is useful, and what attacks it helps prevent.
+
+
+## Advanced capabilities added
+- Mission-profile risk multipliers for critical assets
+- Threat-intel reputation and lateral movement fanout signals
+- Kernel module drift integrity signal
+- Deception tripwire support (honeytoken/decoy/canary)
+- MITRE ATT&CK technique mapping per domain
+- Immediate SOC action checklist in responses

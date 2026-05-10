@@ -1,49 +1,82 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from ipaddress import ip_address
+from typing import Dict, List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
-class SensorPayload(BaseModel):
-    pir_triggered: bool = False
+class IdentityContext(BaseModel):
+    node_id: str = Field(min_length=3, max_length=64)
+    operator_id: str = Field(min_length=3, max_length=64)
+    mfa_verified: bool = True
+    impossible_travel_flag: bool = False
+    privilege_escalation_attempts: int = Field(default=0, ge=0)
+
+
+class NetworkSignals(BaseModel):
+    src_ip: str
+    failed_logins_5m: int = Field(default=0, ge=0)
+    unique_ports_scanned_5m: int = Field(default=0, ge=0)
+    c2_beacon_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    tls_fingerprint_mismatch: bool = False
+    egress_bytes_5m: int = Field(default=0, ge=0)
+    threat_intel_reputation: float = Field(default=0.0, ge=0.0, le=1.0)
+    lateral_movement_edges: int = Field(default=0, ge=0)
+
+    @field_validator("src_ip")
+    @classmethod
+    def validate_ip(cls, value: str) -> str:
+        ip_address(value)
+        return value
+
+
+class RuntimeIntegrity(BaseModel):
+    secure_boot_ok: bool = True
+    firmware_hash_match: bool = True
+    memory_tamper_alert: bool = False
+    unsigned_processes: int = Field(default=0, ge=0)
+    suspicious_syscalls_1m: int = Field(default=0, ge=0)
+    kernel_module_drift_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class PhysicalSignals(BaseModel):
+    enclosure_opened: bool = False
     vibration: float = Field(default=0.0, ge=0.0, le=1.0)
-    sound_db: float = Field(default=0.0, ge=0.0, le=200.0)
-    thermal_presence: bool = False
-    light_change: float = Field(default=0.0, ge=0.0, le=1.0)
-    humidity: Optional[float] = Field(default=None, ge=0.0, le=100.0)
-    temperature: Optional[float] = Field(default=None, ge=-50.0, le=100.0)
+    thermal_delta_c: float = Field(default=0.0, ge=-30.0, le=80.0)
+    ultrasonic_motion_score: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
-class NetworkPayload(BaseModel):
-    failed_logins: int = Field(default=0, ge=0)
-    unknown_ip_hits: int = Field(default=0, ge=0)
-    firmware_hash_mismatch: bool = False
-    bandwidth_spike: bool = False
-    repeated_port_scan_signals: int = Field(default=0, ge=0)
+class DeceptionSignals(BaseModel):
+    honeytoken_touched: bool = False
+    decoy_service_touched: bool = False
+    canary_credential_used: bool = False
 
 
-class AnalyzeRequest(BaseModel):
-    device_id: str
+class ThreatAssessmentRequest(BaseModel):
     timestamp: datetime
-    sensors: SensorPayload
-    audio_events: List[str] = []
-    network: NetworkPayload
+    mission_profile: Literal["critical_infra", "enterprise_edge", "remote_outpost"]
+    identity: IdentityContext
+    network: NetworkSignals
+    runtime: RuntimeIntegrity
+    physical: PhysicalSignals
+    deception: DeceptionSignals = DeceptionSignals()
+    telemetry_tags: List[str] = []
 
 
-class ScoreBreakdown(BaseModel):
-    physical_score: float
-    audio_score: float
-    cyber_score: float
-    fused_score: float
-
-
-class AnalyzeResponse(BaseModel):
-    device_id: str
-    risk_level: str
-    confidence: float
-    score_breakdown: ScoreBreakdown
+class DomainScore(BaseModel):
+    score: float
     reasons: List[str]
-    recommended_actions: List[str]
-    alert: bool
+    prevented_attacks: List[str]
+    mitre_techniques: List[str]
+
+
+class ThreatAssessmentResponse(BaseModel):
+    overall_risk: Literal["low", "guarded", "elevated", "critical"]
+    confidence: float
+    risk_score: float
+    domain_scores: Dict[str, DomainScore]
+    containment_plan: List[str]
+    attack_kill_chain_stage: str
+    immediate_actions: List[str]
