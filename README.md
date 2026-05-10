@@ -1,4 +1,4 @@
-# NEN CENTAURUS for ORIGIN (v3)
+# NEN CENTAURUS for ORIGIN
 
 NEN CENTAURUS is a cyber-defense decision engine for ORIGIN environments. It fuses identity, network, runtime integrity, and physical tamper telemetry into a unified threat assessment and containment plan.
 
