@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 *.pyc
 .env
+.abyssal/
+state/
+*.sqlite3*
+audit_events.jsonl
+.ruff_cache/

@@ -1,0 +1,3 @@
+"""CENTAURUS V4 — ABYSSAL."""
+
+VERSION = "4.0.0"
