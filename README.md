@@ -1,67 +1,77 @@
-# NEN CENTAURUS for ORIGIN (v3)
+# CENTAURUS V4 — ABYSSAL
 
-NEN CENTAURUS is a cyber-defense decision engine for ORIGIN environments. It fuses identity, network, runtime integrity, and physical tamper telemetry into a unified threat assessment and containment plan.
+**Authenticated telemetry. Persistent replay defense. Conservative threat decisions.**
 
-## Core API
-- `POST /v3/assess` — primary threat assessment endpoint
-- `POST /v1/analyze` — compatibility route mapped to the same v3 engine
-- `GET /health` — health + engine state
+ABYSSAL is the hardened fourth version of ORIGIN's defensive decision engine. It combines identity, network, runtime integrity, physical tamper, and deception signals into an explainable assessment. It runs locally without an external AI service or cloud account.
 
-## Quick start
+Every assessment requires a provisioned device's Ed25519 signature. The server holds public device keys only. Production requires HTTPS, explicit allowed hosts, private configuration, and working security state. There are no default credentials or anonymous assessment routes.
+
+## What changed
+
+| Control | V4 behavior |
+| --- | --- |
+| Device identity | A key is restricted to one node; keys can be disabled or rotated |
+| Request integrity | Exact body bytes, method, route, key ID, timestamp, and nonce are signed |
+| Replay defense | Atomic SQLite nonce reservation, shared across workers and preserved across restarts |
+| Input boundary | Strict types, finite bounded numbers, duplicate-field rejection, body/header limits, receive deadline |
+| Resource controls | Persistent global and authenticated-device quotas; bounded nonce and audit capacity |
+| Decision policy | Serious integrity failures have minimum risk levels; missing integrity remains unknown |
+| Audit evidence | HMAC-linked records and receipts bind request and response digests to the decision |
+| Containment | Recommendations require operator approval; no isolation or credential changes execute automatically |
+
+This is a deterministic policy engine. A signed device can still report false observations if compromised. Its scores are policy scores, not calibrated probabilities. No remote attestation, hardware secure boot, firewall enforcement, or DUO integration is claimed by this API.
+
+## Local quick start
+
+Python 3.12 is the tested runtime. From the repository root, in a POSIX shell:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m pip install --require-hashes -r requirements-lock.txt
+python -m scripts.abyssal provision --development
+export CENTAURUS_CONFIG_FILE="$PWD/.abyssal/server.json"
+python -m uvicorn app_v4.main:create_app --factory \
+  --host 127.0.0.1 --port 8000 --no-proxy-headers --no-server-header \
+  --limit-concurrency 64 --timeout-keep-alive 5 --h11-max-incomplete-event-size 8192
 ```
 
-## Sample request
+In another activated terminal, generate fresh **synthetic** telemetry and submit it:
+
 ```bash
-curl -X POST http://127.0.0.1:8000/v3/assess \
-  -H "Content-Type: application/json" \
-  -d '{
-    "timestamp": "2026-05-10T00:00:00Z",
-    "mission_profile": "critical_infra",
-    "identity": {
-      "node_id": "origin-node-17",
-      "operator_id": "op-77",
-      "mfa_verified": false,
-      "impossible_travel_flag": true,
-      "privilege_escalation_attempts": 4
-    },
-    "network": {
-      "src_ip": "203.0.113.77",
-      "failed_logins_5m": 30,
-      "unique_ports_scanned_5m": 24,
-      "c2_beacon_score": 0.81,
-      "tls_fingerprint_mismatch": true,
-      "egress_bytes_5m": 220000000
-    },
-    "runtime": {
-      "secure_boot_ok": false,
-      "firmware_hash_match": false,
-      "memory_tamper_alert": true,
-      "unsigned_processes": 6,
-      "suspicious_syscalls_1m": 250
-    },
-    "physical": {
-      "enclosure_opened": true,
-      "vibration": 0.89,
-      "thermal_delta_c": 24,
-      "ultrasonic_motion_score": 0.82
-    },
-    "telemetry_tags": ["night-shift", "vip-asset"]
-  }'
+python -m scripts.abyssal sample
+python -m scripts.abyssal assess \
+  --url http://127.0.0.1:8000/v4/assess --allow-local-http
+python -m scripts.abyssal verify-audit
 ```
 
-## Security map
-See `docs/NEN_CENTAURUS_SECURITY_MAP.md` for a full map of each capability, where it is useful, and what attacks it helps prevent.
+The toolkit creates private files and refuses to overwrite existing identities or samples. Generate a new sample filename with `--output` and pass it with `--payload` when the previous sample becomes stale. Device clocks must be synchronized. Development HTTP is an explicit local-only setup; follow the production guide before using real telemetry.
 
+## API
 
-## Advanced capabilities added
-- Mission-profile risk multipliers for critical assets
-- Threat-intel reputation and lateral movement fanout signals
-- Kernel module drift integrity signal
-- Deception tripwire support (honeytoken/decoy/canary)
-- MITRE ATT&CK technique mapping per domain
-- Immediate SOC action checklist in responses
+| Route | Access |
+| --- | --- |
+| `POST /v4/assess` | Signed device request, fresh telemetry, matching node identity |
+| `GET /health` | Minimal public liveness response |
+| `GET /` | Public edition and endpoint metadata |
+
+Successful assessments include domain explanations, policy triggers, evidence gaps, and approval-required recommendations. `X-Request-ID`, `X-Audit-Sequence`, and `X-Audit-Digest` provide correlation and an audit receipt. Full protocol and error semantics: [V4 security design](docs/v4_security.md).
+
+## Production and migration
+
+Use the new factory entrypoint, `app_v4.main:create_app --factory`. V1/V2/V3 routes and interactive docs are **not mounted** by V4. Historical applications remain in the repository for migration and regression tests; do not expose their old entrypoints alongside ABYSSAL.
+
+Provision production credentials without `--development`, install valid TLS certificates, and deploy with private persistent state. See [deployment, key rotation, and recovery](docs/v4_operations.md). A non-root TLS Docker image is included; it needs operator-provided certificates and configuration.
+
+## Validation
+
+```bash
+python -m pip install --require-hashes -r requirements-lock.txt
+python -m pip install -r requirements-dev.txt
+ruff check app_v4 scripts/abyssal.py tests/test_v4_api.py tests/test_v4_toolkit.py
+ruff format --check app_v4 scripts/abyssal.py tests/test_v4_api.py tests/test_v4_toolkit.py
+pytest -q
+pip-audit --strict --disable-pip --no-deps -r requirements-lock.txt
+```
+
+CI runs security regressions, historical API tests, formatting, and the runtime advisory audit. Dependency and GitHub Actions updates are checked weekly. An advisory scan finds known published vulnerabilities; it is not a penetration test or a security certification.
